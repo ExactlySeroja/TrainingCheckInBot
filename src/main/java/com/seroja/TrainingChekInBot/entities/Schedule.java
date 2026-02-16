@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.entities;
 
 import jakarta.persistence.*;
@@ -24,4 +23,3 @@ public class Schedule {
     @Column(name = "time", nullable = false)
     private LocalTime time;
 }
-*/

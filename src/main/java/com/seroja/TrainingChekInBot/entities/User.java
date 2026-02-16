@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.entities;
 
 import com.seroja.TrainingChekInBot.enums.Role;
@@ -7,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 
 @Entity
-@Table(name = "user")
+@Table(name = "users")
 public class User {
 
     @Id
@@ -33,4 +32,3 @@ public class User {
     private Role role;
 
 }
-*/

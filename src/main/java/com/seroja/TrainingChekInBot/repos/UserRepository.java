@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.repos;
 
 import com.seroja.TrainingChekInBot.entities.User;
@@ -9,4 +8,3 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
 
 }
-*/

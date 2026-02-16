@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.repos;
 
 
@@ -9,4 +8,3 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 }
-*/

@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.repos;
 
 import com.seroja.TrainingChekInBot.entities.Attendance;
@@ -8,4 +7,3 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 }
-*/

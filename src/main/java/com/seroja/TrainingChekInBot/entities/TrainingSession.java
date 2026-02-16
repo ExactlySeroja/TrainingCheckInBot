@@ -1,4 +1,3 @@
-/*
 package com.seroja.TrainingChekInBot.entities;
 
 import jakarta.persistence.*;
@@ -29,4 +28,3 @@ public class TrainingSession {
     private LocalTime finishingAt;
 
 }
-*/
