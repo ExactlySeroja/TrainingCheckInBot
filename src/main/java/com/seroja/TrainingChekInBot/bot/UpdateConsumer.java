@@ -1,6 +1,11 @@
 package com.seroja.TrainingChekInBot.bot;
 
+import com.seroja.TrainingChekInBot.dtos.StudentRegistrationDTO;
+import com.seroja.TrainingChekInBot.enums.Role;
+import com.seroja.TrainingChekInBot.mappers.UserMapper;
+import com.seroja.TrainingChekInBot.services.UserService;
 import lombok.SneakyThrows;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -29,30 +34,67 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
 
     private final TelegramClient telegramClient;
 
+    private final UserService userService;
 
-    public UpdateConsumer() {
+    public UpdateConsumer(UserService userService, UserMapper userMapper) {
+        this.userService = userService;
         String token = System.getenv("BOT_TOKEN");
         this.telegramClient = new OkHttpTelegramClient(token);
     }
 
     @SneakyThrows
     @Override
-    public void consume(List<Update> list) {
-        if (list.getLast().hasMessage()) {
-            String messageText = list.getLast().getMessage().getText();
-            Long chatId = list.getLast().getMessage().getChatId();
+    public void consume(@NonNull List<Update> list) {
+        Update update = list.getLast();
+        if (update.hasMessage()) {
+            String messageText = update.getMessage().getText();
+            Long chatId = update.getMessage().getChatId();
+            var userTelegramId = update.getMessage().getFrom().getId();
 
             if (messageText.equals("/start")) {
+                /*if (userService.findUserByTelegramId(userTelegramId)) {
+                    sendMessage(chatId, "You already registered");
+                } else sendMainMenu(chatId);*/
                 sendMainMenu(chatId);
-            } else if (messageText.equals("/keyboard")) {
-                sendReplyKeyboard(chatId);
             } else {
                 sendMessage(chatId, "Wrong command");
             }
-        } else if (list.getLast().hasCallbackQuery()) {
-            handleCallBack(list.getLast().getCallbackQuery());
+        } else if (update.hasCallbackQuery()) {
+            handleCallBack(update.getCallbackQuery());
         }
     }
+
+    private void sendMainMenu(Long chatId) {
+        SendMessage message = SendMessage.builder()
+                .text("Вітаю! Оберіть опцію:")
+                .chatId(chatId)
+                .build();
+
+        var button1 = InlineKeyboardButton.builder()
+                .text("Я новий учень")
+                .callbackData("student_registration")
+                .build();
+
+        var button2 = InlineKeyboardButton.builder()
+                .text("Я новий вчитель")
+                .callbackData("teacher_registration")
+                .build();
+
+        List<InlineKeyboardRow> keyboardRows = List.of(
+                new InlineKeyboardRow(button1),
+                new InlineKeyboardRow(button2)
+        );
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup(keyboardRows);
+
+        message.setReplyMarkup(markup);
+        try {
+            telegramClient.execute(message);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException("Something happen with telegram!");
+        }
+    }
+
 
     @SneakyThrows
     private void sendReplyKeyboard(Long chatId) {
@@ -72,16 +114,22 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
     }
 
     private void handleCallBack(CallbackQuery callbackQuery) {
-        var data = callbackQuery.getData();
-        var chatId = callbackQuery.getFrom().getId();
-        var user = callbackQuery.getFrom();
+        String data = callbackQuery.getData();
+        Long chatId = callbackQuery.getFrom().getId();
+        User user = callbackQuery.getFrom();
         switch (data) {
-            case "my_name" -> sendMyName(chatId, user);
-            case "random" -> sendRandom(chatId);
+            case "student_registration" -> registerStudent(chatId, user);
+            case "teacher_registration" -> sendRandom(chatId);
             case "long_process" -> sendImage(chatId);
             default -> sendMessage(chatId, "Unknown command");
         }
 
+    }
+
+    private void registerStudent(Long chatId, User user) {
+        StudentRegistrationDTO newStudent = new StudentRegistrationDTO(user.getFirstName(), user.getLastName(), Role.STUDENT, chatId);
+        userService.addUser(newStudent);
+        sendMessage(chatId, "You successfully registered as student");
     }
 
     @SneakyThrows
@@ -139,38 +187,5 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
         sendMessage(chatId, text);
     }
 
-    @SneakyThrows
-    private void sendMainMenu(Long chatId) {
-        SendMessage message = SendMessage.builder()
-                .text("Welcome! Chose option:")
-                .chatId(chatId)
-                .build();
 
-        var button1 = InlineKeyboardButton.builder()
-                .text("What's my name?")
-                .callbackData("my_name")
-                .build();
-
-        var button2 = InlineKeyboardButton.builder()
-                .text("Random number")
-                .callbackData("random")
-                .build();
-
-        var button3 = InlineKeyboardButton.builder()
-                .text("Download picture")
-                .callbackData("long_process")
-                .build();
-
-        List<InlineKeyboardRow> keyboardRows = List.of(
-                new InlineKeyboardRow(button1),
-                new InlineKeyboardRow(button2),
-                new InlineKeyboardRow(button3)
-        );
-
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup(keyboardRows);
-
-        message.setReplyMarkup(markup);
-        telegramClient.execute(message);
-    }
 }
