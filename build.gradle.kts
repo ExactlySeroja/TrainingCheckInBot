@@ -30,6 +30,9 @@ dependencies {
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.projectlombok:lombok")
+	implementation("org.mapstruct:mapstruct:1.6.3")
+	annotationProcessor ("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+	annotationProcessor ("org.mapstruct:mapstruct-processor:1.6.3")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -37,6 +40,7 @@ dependencies {
 	implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.1")
 	implementation("org.telegram:telegrambots-springboot-longpolling-starter:9.2.1")
 	implementation("org.telegram:telegrambots-client:9.2.1")
+	implementation("org.projectlombok:lombok-mapstruct-binding:0.2.0")
 }
 
 tasks.withType<Test> {
