@@ -1,10 +1,7 @@
 package com.seroja.TrainingChekInBot.bot;
 
-import com.seroja.TrainingChekInBot.dtos.StudentRegistrationDTO;
 import com.seroja.TrainingChekInBot.enums.Role;
-import com.seroja.TrainingChekInBot.mappers.UserMapper;
 import com.seroja.TrainingChekInBot.services.UserService;
-import lombok.SneakyThrows;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
@@ -24,10 +21,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 public class UpdateConsumer implements LongPollingUpdateConsumer {
@@ -36,32 +32,54 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
 
     private final UserService userService;
 
-    public UpdateConsumer(UserService userService, UserMapper userMapper) {
+    public UpdateConsumer(UserService userService) {
         this.userService = userService;
         String token = System.getenv("BOT_TOKEN");
         this.telegramClient = new OkHttpTelegramClient(token);
     }
 
-    @SneakyThrows
     @Override
     public void consume(@NonNull List<Update> list) {
         Update update = list.getLast();
         if (update.hasMessage()) {
             String messageText = update.getMessage().getText();
             Long chatId = update.getMessage().getChatId();
-            var userTelegramId = update.getMessage().getFrom().getId();
+            Long userTelegramId = update.getMessage().getFrom().getId();
 
-            if (messageText.equals("/start")) {
-                /*if (userService.findUserByTelegramId(userTelegramId)) {
-                    sendMessage(chatId, "You already registered");
-                } else sendMainMenu(chatId);*/
-                sendMainMenu(chatId);
-            } else {
-                sendMessage(chatId, "Wrong command");
+            switch (messageText) {
+                case "/start" -> {
+                    if (userService.checkUserByTelegramId(userTelegramId)) {
+                        sendMessage(chatId, "Ви вже зареэстровані!");
+                    } else sendMainMenu(chatId);
+                }
+                case "/adminpanel" -> sendAdminMenu(chatId);
+                default -> sendMessage(chatId, "Хибна команда!");
             }
         } else if (update.hasCallbackQuery()) {
             handleCallBack(update.getCallbackQuery());
         }
+    }
+
+    private void sendAdminMenu(Long chatId) {
+
+        SendMessage message = SendMessage.builder()
+                .text("Simple keyboard example")
+                .chatId(chatId)
+                .build();
+
+        List<KeyboardRow> keyboardRows = List.of(
+                new KeyboardRow("Показати список учнів", "Показати список вчителів")
+        );
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(keyboardRows);
+        message.setReplyMarkup(markup);
+
+        try {
+            telegramClient.execute(message);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private void sendMainMenu(Long chatId) {
@@ -95,52 +113,41 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
         }
     }
 
-
-    @SneakyThrows
-    private void sendReplyKeyboard(Long chatId) {
-        SendMessage message = SendMessage.builder()
-                .text("Simple keyboard example")
-                .chatId(chatId)
-                .build();
-
-        List<KeyboardRow> keyboardRows = List.of(
-                new KeyboardRow("Hi!", "Image")
-        );
-
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(keyboardRows);
-        message.setReplyMarkup(markup);
-
-        telegramClient.execute(message);
-    }
-
     private void handleCallBack(CallbackQuery callbackQuery) {
         String data = callbackQuery.getData();
         Long chatId = callbackQuery.getFrom().getId();
         User user = callbackQuery.getFrom();
         switch (data) {
             case "student_registration" -> registerStudent(chatId, user);
-            case "teacher_registration" -> sendRandom(chatId);
+            case "teacher_registration" -> registerTeacher(chatId, user);
             case "long_process" -> sendImage(chatId);
             default -> sendMessage(chatId, "Unknown command");
         }
 
     }
 
-    private void registerStudent(Long chatId, User user) {
-        StudentRegistrationDTO newStudent = new StudentRegistrationDTO(user.getFirstName(), user.getLastName(), Role.STUDENT, chatId);
-        userService.addUser(newStudent);
-        sendMessage(chatId, "You successfully registered as student");
+    private void registerTeacher(Long chatId, User user) {
+        userService.addUser(user, Role.TEACHER, chatId);
+        sendMessage(chatId, "Ваша заявка на реєстрацію надіслана!");
+
+
     }
 
-    @SneakyThrows
-    private void sendMessage(Long chatId, String messageText) {
+    private void registerStudent(Long chatId, User user) {
+        userService.addUser(user, Role.STUDENT, chatId);
+        sendMessage(chatId, "Ви успішно зареєструвалися як студент!");
+    }
 
+    private void sendMessage(Long chatId, String messageText) {
         SendMessage message = SendMessage.builder()
                 .text(messageText)
                 .chatId(chatId)
                 .build();
-        telegramClient.execute(message);
-
+        try {
+            telegramClient.execute(message);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException("Message was not sent!");
+        }
 
     }
 
@@ -150,7 +157,7 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
         new Thread(() -> {
             var imageUrl = "https://picsum.photos/200";
             try {
-                URL url = new URL(imageUrl);
+                URL url = URI.create(imageUrl).toURL();
                 var inputStream = url.openStream();
 
                 SendPhoto sendPhoto = SendPhoto.builder()
@@ -161,30 +168,11 @@ public class UpdateConsumer implements LongPollingUpdateConsumer {
 
                 telegramClient.execute(sendPhoto);
 
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (TelegramApiException e) {
+            } catch (TelegramApiException | IOException e) {
                 throw new RuntimeException(e);
             }
         }).start();
 
-    }
-
-    private void sendRandom(Long chatId) {
-        var randomInt = ThreadLocalRandom.current().nextInt();
-        sendMessage(chatId, "Your random number is: " + randomInt);
-    }
-
-    private void sendMyName(Long chatId, User user) {
-
-        var text = "Hi!\n\nYour name is %s\nYour nickname: @%s"
-                .formatted(
-                        user.getFirstName() + " " + user.getLastName(),
-                        user.getUserName()
-                );
-        sendMessage(chatId, text);
     }
 
 

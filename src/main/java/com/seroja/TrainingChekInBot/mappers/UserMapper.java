@@ -1,7 +1,7 @@
 package com.seroja.TrainingChekInBot.mappers;
 
 
-import com.seroja.TrainingChekInBot.dtos.StudentRegistrationDTO;
+import com.seroja.TrainingChekInBot.dtos.UserRegistrationDTO;
 import com.seroja.TrainingChekInBot.dtos.UserDTO;
 import com.seroja.TrainingChekInBot.entities.AppUser;
 import org.mapstruct.Mapper;
@@ -22,5 +22,5 @@ public interface UserMapper {
     List<AppUser> toEntityList(List<UserDTO> userDtos);
 
     @Mapping(target = "userId", ignore = true) // ID обычно не приходит из DTO при регистрации
-    AppUser toEntity(StudentRegistrationDTO dto);
+    AppUser toEntity(UserRegistrationDTO dto);
 }
